@@ -1,0 +1,33 @@
+{
+  "service": {
+    "name": "AML Compliance Agent",
+    "version": "1.0.0",
+    "port": 3001
+  },
+  "t3n": {
+    "environment": "testnet",
+    "api_key_env": "T3N_API_KEY"
+  },
+  "compliance": {
+    "risk_thresholds": {
+      "approve": 30,
+      "review": 70,
+      "block": 100
+    },
+    "weights": {
+      "sanctioned": 0.40,
+      "mixer": 0.25,
+      "jurisdiction": 0.20,
+      "patterns": 0.15
+    }
+  },
+  "sanctions": {
+    "sources": ["OFAC SDN", "EU Sanctions", "UN Sanctions"],
+    "cache_ttl_hours": 24
+  },
+  "high_risk_jurisdictions": ["IR", "KP", "SY", "CU"],
+  "mixer_addresses": [
+    "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b",
+    "0xba214c1c1928a32bbe78e45b7e9927895c80d10b"
+  ]
+}
