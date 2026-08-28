@@ -4,6 +4,5 @@ node_modules/
 *.log
 /tmp/
 web/.DS_Store
-data/
 t3n-contract/target/
 t3n-reference/
