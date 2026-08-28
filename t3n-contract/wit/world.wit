@@ -1,0 +1,42 @@
+/// z-aml-compliance WIT world — AML compliance checking inside TEE.
+///
+/// Imports required host capabilities:
+///   - tenant-context:   tenant DID, cluster timestamp
+///   - logging:          debug / info / error lines
+///   - kv-store:         reads sanctions data from encrypted KV maps
+///
+/// The sanctions list is stored in z:<tid>:sanctions map.
+/// Risk scoring logic runs entirely inside the TEE enclave.
+package z:aml-compliance@0.1.0;
+
+world aml-compliance {
+    import host:tenant/tenant-context@1.0.0;
+    import host:interfaces/logging@2.1.0;
+    import host:interfaces/kv-store@2.1.0;
+
+    export contracts;
+}
+
+interface contracts {
+    /// Standard 3-field envelope used by all contracts callable from the node.
+    record generic-input {
+        input:        option<list<u8>>,
+        user-profile: option<list<u8>>,
+        context:      option<list<u8>>,
+    }
+
+    /// Check a single wallet for AML compliance risk.
+    /// Input  (JSON): { wallet: "0x...", jurisdiction: "GLOBAL" }
+    /// Output (JSON): { wallet, status, risk_score, flags[], breakdown, sanctions_match, tenant_did, timestamp }
+    check-wallet: func(req: generic-input) -> result<list<u8>, string>;
+
+    /// Check multiple wallets in a single call.
+    /// Input  (JSON): { wallets: ["0x...", "0x..."], jurisdiction: "GLOBAL" }
+    /// Output (JSON): { summary: { total, approved, review, blocked }, results: [...] }
+    check-batch: func(req: generic-input) -> result<list<u8>, string>;
+
+    /// Get the sanctions list summary (count, sources).
+    /// Input  (JSON): {}
+    /// Output (JSON): { total_addresses, sources[], loaded_at }
+    get-sanctions-info: func(req: generic-input) -> result<list<u8>, string>;
+}
