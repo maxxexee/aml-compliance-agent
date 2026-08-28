@@ -1,46 +1,88 @@
-# 🔒 AML Compliance Agent
+# 🔒 R3nzo — AML Crypto Compliance Agent
 
 **Privacy-preserving wallet risk analysis powered by Terminal 3 TEE**
 
-Built for the Terminal 3 Enterprise Agent Bounty
+Built for the [Terminal 3 Enterprise Agent Bounty](https://go.terminal3.io/adk-community)
 
 ---
 
-## What This Does
+## Problem Statement
 
-An AML (Anti-Money Laundering) compliance agent that verifies wallet addresses against sanctions lists and on-chain risk data — without exposing sensitive data.
+Crypto businesses need to comply with AML (Anti-Money Laundering) regulations — but traditional compliance tools expose sensitive data. When an exchange checks a wallet against sanctions lists, that checking logic, the sanctions data, and the risk algorithm all sit in plaintext on a server. Any breach leaks the entire compliance infrastructure.
 
-### How It Works
-
-```
-[User enters wallet] → [On-chain data pulled] → [TEE processes] → [Verdict returned]
-                                              ↓
-                                    Agent NEVER sees:
-                                    - Private keys
-                                    - Sanctions matching logic
-                                    - Risk scoring algorithm
-```
+**Terminal 3's TEE solves this.** R3nzo runs all sensitive compliance logic inside a hardware-secured Trusted Execution Environment — the sanctions matching, risk scoring, and audit trail creation happen inside an enclave that even the server operator can't access.
 
 ---
 
-## Why Terminal 3?
+## What R3nzo Does
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    USER SUBMITS WALLET                    │
+│                 (0xd857...981 or natural language)        │
+└──────────────────────┬───────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────────────────┐
+│              ON-CHAIN DATA (public blockchain)            │
+│         Pulls transactions, interactions, patterns       │
+└──────────────────────┬───────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────────────────┐
+│            TERMINAL 3 TEE (private enclave)               │
+│                                                          │
+│  ┌─────────────────┐  ┌──────────────────┐              │
+│  │ Sanctions Check │  │  Risk Scoring    │              │
+│  │ (OFAC/EU/UN)    │  │  (weighted formula)│             │
+│  └─────────────────┘  └──────────────────┘              │
+│                                                          │
+│  ┌──────────────────────────────────────────┐           │
+│  │        Immutable Audit Trail              │           │
+│  └──────────────────────────────────────────┘           │
+└──────────────────────┬───────────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────────────────┐
+│                   VERDICT RETURNED                        │
+│                                                          │
+│  ✅ APPROVE (score 0-30)   — Low risk, safe to proceed  │
+│  ⚠️  REVIEW (score 31-70)  — Medium risk, needs review  │
+│  ❌ BLOCK   (score 71-100) — High risk, do not proceed  │
+└──────────────────────────────────────────────────────────┘
+```
+
+**What stays private (inside TEE):**
+- Sanctions list matching logic
+- Risk scoring algorithm
+- Audit trail records
+
+**What stays public:**
+- Wallet address (it's on the blockchain)
+- Transaction history (it's on the blockchain)
+- The verdict (shared with compliance team)
+
+---
+
+## Why Terminal 3
 
 | Feature | Benefit |
 |---------|---------|
-| **TEE (Trusted Execution Environment)** | Sensitive checks run in secure enclave |
+| **TEE (Trusted Execution Environment)** | Sensitive checks run in a hardware-secured enclave |
 | **DID Integration** | Verifiable identity for enterprises |
-| **Audit Trail** | Immutable compliance records |
-| **Privacy** | Agent never sees raw data |
+| **Immutable Audit Trail** | Tamper-proof compliance records |
+| **Privacy** | Agent never sees raw data or matching logic |
 
 ---
 
 ## Quick Start
 
-### 1. Get Terminal 3 API Key
+### Prerequisites
 
-Go to https://go.terminal3.io/adk-community and sign up.
+- Node.js 18+
+- Terminal 3 API key ([get one here](https://go.terminal3.io/adk-community))
 
-### 2. Install & Run
+### Setup
 
 ```bash
 # Clone the repo
@@ -50,82 +92,130 @@ cd aml-compliance-agent
 # Install dependencies
 npm install
 
-# Set API key
+# Set your Terminal 3 API key
 export T3N_API_KEY="your-key-here"
 
 # Start the server
 npm start
 ```
 
-### 3. Test It
+### Verify Connection
 
 ```bash
-# Run tests
-npm test
-
-# Or test manually
+# Health check — should show t3n_connected: true
 curl http://localhost:3001/api/health
+
+# Check a sanctioned wallet — should return BLOCK
 curl -X POST http://localhost:3001/api/check-wallet \
   -H "Content-Type: application/json" \
-  -d '{"wallet": "0x1234567890abcdef1234567890abcdef12345678"}'
+  -d '{"wallet": "0xd8579921026d261b853607856136bfc6a8a3b981"}'
+
+# Run the self-testing script
+npm test
 ```
 
 ---
 
 ## API Endpoints
 
-### POST /api/check-wallet
+### POST `/api/check-wallet`
 
 Check a single wallet for AML compliance.
 
 **Request:**
 ```json
 {
-  "wallet": "0x1234...abcd",
+  "wallet": "0xd8579921026d261b853607856136bfc6a8a3b981",
   "check_type": "aml",
   "jurisdiction": "US"
 }
 ```
 
-**Response (Safe):**
-```json
-{
-  "status": "APPROVE",
-  "wallet": "0x1234...abcd",
-  "risk_score": 12,
-  "flags": [],
-  "audit_id": "t3n-abc-123",
-  "timestamp": "2026-08-27T10:00:00Z"
-}
-```
-
-**Response (High Risk):**
+**Response (Blocked):**
 ```json
 {
   "status": "BLOCK",
-  "wallet": "0xdead...beef",
-  "risk_score": 87,
+  "wallet": "0xd8579921026d261b853607856136bfc6a8a3b981",
+  "risk_score": 85,
   "flags": ["directly_sanctioned", "mixer_interaction"],
-  "audit_id": "t3n-def-456",
-  "timestamp": "2026-08-27T10:00:00Z"
+  "audit_id": "t3n-1787910133881-bh3j0tr53",
+  "jurisdiction": "GLOBAL",
+  "timestamp": "2026-08-28T09:42:13.881Z"
 }
 ```
 
-### POST /api/check-batch
+**Response (Approved):**
+```json
+{
+  "status": "APPROVE",
+  "wallet": "0x0000000000000000000000000000000000000001",
+  "risk_score": 0,
+  "flags": [],
+  "audit_id": "t3n-1787910153571-hcim2rzkn",
+  "jurisdiction": "GLOBAL",
+  "timestamp": "2026-08-28T09:42:33.571Z"
+}
+```
+
+### POST `/api/check-batch`
 
 Check multiple wallets at once.
 
-### GET /api/sanctions
+**Request:**
+```json
+{
+  "wallets": [
+    "0x0000000000000000000000000000000000000001",
+    "0xd8579921026d261b853607856136bfc6a8a3b981"
+  ]
+}
+```
 
-Get sanctions list information.
+**Response:**
+```json
+{
+  "total": 2,
+  "approved": 1,
+  "review": 0,
+  "blocked": 1,
+  "results": [...]
+}
+```
 
-### GET /api/audit
+### GET `/api/health`
 
-Get audit trail history.
+```json
+{
+  "status": "ok",
+  "service": "AML Compliance Agent",
+  "t3n_connected": true,
+  "tenant_did": "did:t3n:51792674f39e3f1958ddc7c7c52f51860fa60fa0"
+}
+```
 
-### GET /api/health
+### GET `/api/audit`
 
-Health check.
+Returns the last 50 compliance checks.
+
+### GET `/api/sanctions`
+
+Returns sanctions list metadata.
+
+---
+
+## Risk Scoring
+
+| Factor | Weight | Source | Verdict |
+|--------|--------|--------|---------|
+| Sanctioned connections | 40% | OFAC / EU / UN lists | BLOCK if matched |
+| Mixer interactions | 25% | On-chain analysis | REVIEW if detected |
+| High-risk jurisdiction | 20% | Country code check | REVIEW if flagged |
+| Transaction patterns | 15% | Volume analysis | APPROVE if normal |
+
+**Score ranges:**
+- 0–30 → APPROVE
+- 31–70 → REVIEW
+- 71–100 → BLOCK
 
 ---
 
@@ -134,47 +224,31 @@ Health check.
 Open `web/pages/index.html` in your browser for a visual interface.
 
 Features:
-- ✅ Wallet address input
-- ✅ Real-time risk scoring
-- ✅ Color-coded results
-- ✅ Flag details
-- ✅ Audit trail display
+- 🔍 Wallet address input with real-time results
+- 💬 Chat with R3nzo (requires Ollama + Qwen3:8b locally)
+- ✅ Color-coded risk visualization
+- 📋 Flag details and audit trail
 
 ---
 
-## Risk Scoring
-
-| Score | Verdict | Meaning |
-|-------|---------|---------|
-| 0-30 | APPROVE | Low risk, safe to proceed |
-| 31-70 | REVIEW | Medium risk, needs manual review |
-| 71-100 | BLOCK | High risk, do not proceed |
-
-### Factors Checked
-
-| Factor | Weight | Source |
-|--------|--------|--------|
-| Sanctioned connections | 40% | OFAC/EU/UN lists |
-| Mixer interactions | 25% | On-chain analysis |
-| High-risk jurisdiction | 20% | Country data |
-| Transaction patterns | 15% | Volume analysis |
-
----
-
-## Project Structure
+## Architecture
 
 ```
 aml-compliance-agent/
 ├── api/
-│   └── server.js          # Express API server
+│   ├── server.js          # Express API (port 3001)
+│   ├── agent.js           # R3nzo AI brain (Ollama + Qwen3)
+│   ├── sanctions.js       # OFAC/EU/UN sanctions checking
+│   └── onchain.js         # On-chain analysis (Ethers.js)
 ├── t3n-contracts/
-│   └── compliance.ts      # TEE compliance logic
+│   └── compliance.js      # T3N SDK integration + TEE logic
 ├── web/
 │   └── pages/
-│       └── index.html     # Web dashboard
-├── config.json            # Configuration
-├── test.js                # Test script
-├── README.md              # This file
+│       └── index.html     # Landing page + demo dashboard
+├── quickstart.mjs         # Standalone T3N connection test
+├── test.js                # Self-testing script
+├── config.json            # Risk thresholds and weights
+├── .env                   # API keys (gitignored)
 └── package.json
 ```
 
@@ -191,6 +265,12 @@ Edit `config.json` to customize:
       "approve": 30,
       "review": 70,
       "block": 100
+    },
+    "weights": {
+      "sanctioned": 0.40,
+      "mixer": 0.25,
+      "jurisdiction": 0.20,
+      "patterns": 0.15
     }
   }
 }
@@ -200,46 +280,47 @@ Edit `config.json` to customize:
 
 ## Enterprise Use Cases
 
-1. **Crypto Exchanges** — Verify incoming wallets before listing
+1. **Crypto Exchanges** — Verify incoming wallets before processing deposits
 2. **DeFi Protocols** — Check addresses before allowing transactions
-3. **Payment Processors** — Screen crypto payments
-4. **Banks** — Compliance for crypto-related accounts
+3. **Payment Processors** — Screen crypto payments for compliance
+4. **Banks** — AML compliance for crypto-related accounts
+
+---
+
+## Bug Report
+
+| Bug | Workaround | Status |
+|-----|------------|--------|
+| WASM loading fails under Next.js/Turbopack | Run API as standalone Express server | Known issue (documented in T3N docs) |
+| Ollama chat requires local Qwen3:8b | Install Ollama + pull qwen3:8b model | Expected — cloud LLM alternative planned |
+| On-chain data currently simulated | Real Ethers.js integration in progress | TODO |
+| T3N handshake can timeout on slow networks | Retry logic built into SDK | Fixed |
 
 ---
 
 ## Maintenance
 
-This agent is designed for easy maintenance:
-
 | Task | How |
 |------|-----|
-| Update sanctions list | Edit `mixer_addresses` in config.json |
-| Change risk thresholds | Edit `risk_thresholds` in config.json |
-| Add new checks | Add logic in `t3n-contracts/compliance.ts` |
-| Deploy | `npm start` |
+| Update sanctions list | Edit `mixer_addresses` in `api/sanctions.js` |
+| Change risk thresholds | Edit `config.json` |
+| Add new risk factors | Add logic in `t3n-contracts/compliance.js` |
+| Deploy | `export T3N_API_KEY=... && npm start` |
 
 ---
 
 ## Handover
 
-To hand over to Terminal 3 team:
+To hand over to the Terminal 3 team:
 
-1. Clone repo
-2. `npm install`
-3. Set `T3N_API_KEY`
-4. `npm start`
-5. Done!
-
----
-
-## Bugs & Issues
-
-Document any bugs encountered during development:
-
-| Bug | Workaround | Status |
-|-----|------------|--------|
-| WASM loading in Next.js | Run API separately | Open |
-| T3N handshake timeout | Retry 3 times | Fixed |
+```bash
+git clone https://github.com/your-username/aml-compliance-agent.git
+cd aml-compliance-agent
+npm install
+export T3N_API_KEY="your-key"
+npm start
+# Done — agent is live on port 3001
+```
 
 ---
 
@@ -249,4 +330,4 @@ MIT
 
 ---
 
-*Built for Terminal 3 Enterprise Agent Bounty*
+*Built for [Terminal 3 Enterprise Agent Bounty](https://go.terminal3.io/adk-community) — August 2026*

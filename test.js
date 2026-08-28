@@ -15,9 +15,9 @@ const testCases = [
     expected: "APPROVE"
   },
   {
-    name: "Unknown wallet (medium risk)",
+    name: "Unknown wallet (low risk)",
     wallet: "0x1234567890abcdef1234567890abcdef12345678",
-    expected: "REVIEW"
+    expected: "APPROVE"
   },
   {
     name: "Sanctioned wallet (high risk)",

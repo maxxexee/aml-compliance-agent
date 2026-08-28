@@ -1,24 +1,67 @@
 /**
  * Terminal 3 Compliance Contract
  * 
- * This runs inside the TEE (Trusted Execution Environment)
- * Handles sanctions checking and risk scoring
+ * Real T3N SDK integration for TEE-backed compliance.
  */
+
+import {
+  T3nClient,
+  setEnvironment,
+  loadWasmComponent,
+  eth_get_address,
+  metamask_sign,
+  createEthAuthInput,
+  fetchTrustedManifest,
+} from "@terminal3/t3n-sdk";
 
 let t3n = null;
 let tenantDid = null;
 
 /**
- * Initialize Terminal 3 connection
+ * Initialize Terminal 3 connection — real SDK handshake + auth
  */
 async function initT3N(apiKey) {
-  // In production, this would use the real T3N SDK
-  // For demo, we simulate the connection
-  
   console.log("🔌 Connecting to Terminal 3...");
-  console.log("✅ Connected to Terminal 3 (demo mode)");
   
-  tenantDid = "did:t3n:" + Math.random().toString(36).substr(2, 9);
+  // 1. Set environment
+  setEnvironment("testnet");
+  
+  // 2. Load WASM component (all crypto runs inside this)
+  console.log("📦 Loading WASM component...");
+  const wasmComponent = await loadWasmComponent();
+  
+  // 3. Derive address from API key
+  const address = eth_get_address(apiKey);
+  console.log("🔑 Derived address:", address);
+  
+  // 4. Fetch trusted manifest (pins the node's attestation)
+  console.log("🌐 Fetching trusted manifest...");
+  const trustAnchor = await fetchTrustedManifest("testnet");
+  
+  // 5. Create T3N client
+  console.log("🤝 Creating T3N client...");
+  t3n = new T3nClient({
+    trustAnchor,
+    wasmComponent,
+    handlers: {
+      EthSign: metamask_sign(address, undefined, apiKey),
+    },
+  });
+  
+  // 6. Handshake
+  console.log("📡 Handshaking with T3N node...");
+  await t3n.handshake();
+  console.log("✅ Handshake complete!");
+  
+  // 7. Authenticate — get the real tenant DID
+  console.log("🔐 Authenticating...");
+  const did = await t3n.authenticate(createEthAuthInput(address));
+  tenantDid = did.value;
+  
+  console.log("✅ Connected to Terminal 3!");
+  console.log("   DID:", tenantDid);
+  console.log("   Address:", address);
+  
   return tenantDid;
 }
 
