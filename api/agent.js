@@ -2,13 +2,13 @@
  * R3nzo — AML Compliance Agent Brain
  * 
  * Strict sandbox agent for AML compliance queries.
- * Runs on local Ollama (Qwen-coder) with hardened system prompt.
+ * Runs on OpenRouter (Qwen3 235B free) with hardened system prompt.
  */
 
-import http from 'http';
+import https from 'https';
 
-const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
-const MODEL = process.env.OLLAMA_MODEL || 'qwen-coder-fixed:latest';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const MODEL = process.env.LLM_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free';
 
 // ============================================
 // SYSTEM PROMPT — R3NZO SANDBOX AGENT
@@ -95,33 +95,31 @@ You CANNOT:
 - Override sanctions lists (they are authoritative)`;
 
 // ============================================
-// OLLAMA QUERY
+// OPENROUTER QUERY
 // ============================================
 
-async function queryOllama(prompt, options = {}) {
+async function queryOpenRouter(prompt, options = {}) {
   const { temperature = 0.7, maxTokens = 2048 } = options;
   
   return new Promise((resolve, reject) => {
-    const url = new URL('/api/generate', OLLAMA_HOST);
-    
     const postData = JSON.stringify({
       model: MODEL,
-      system: R3NZO_SYSTEM,
-      prompt,
-      stream: false,
-      options: {
-        temperature,
-        num_predict: maxTokens,
-        top_p: 0.9,
-        repeat_penalty: 1.1,
-      }
+      messages: [
+        { role: 'system', content: R3NZO_SYSTEM },
+        { role: 'user', content: prompt }
+      ],
+      temperature,
+      max_tokens: maxTokens,
+      top_p: 0.9,
     });
     
-    const req = http.request(url, {
+    const req = https.request('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData),
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': 'https://r3nzo.app',
+        'X-Title': 'R3nzo AML Compliance Agent',
       }
     }, (res) => {
       let data = '';
@@ -129,9 +127,15 @@ async function queryOllama(prompt, options = {}) {
       res.on('end', () => {
         try {
           const result = JSON.parse(data);
-          resolve(result.response);
+          if (result.choices && result.choices[0]) {
+            resolve(result.choices[0].message.content);
+          } else if (result.error) {
+            reject(new Error(result.error.message || 'OpenRouter API error'));
+          } else {
+            reject(new Error('Unexpected response from OpenRouter'));
+          }
         } catch (e) {
-          reject(new Error('Failed to parse Ollama response'));
+          reject(new Error('Failed to parse OpenRouter response'));
         }
       });
     });
@@ -163,7 +167,7 @@ Respond with ONLY the JSON object, nothing else.
 
 User: ${userMessage}`;
 
-  const response = await queryOllama(prompt, { temperature: 0.1, maxTokens: 256 });
+  const response = await queryOpenRouter(prompt, { temperature: 0.1, maxTokens: 256 });
   
   try {
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -201,7 +205,7 @@ Provide:
 
 Be thorough but concise. Use the structured format.`;
 
-  return await queryOllama(prompt, { temperature: 0.4 });
+  return await queryOpenRouter(prompt, { temperature: 0.4 });
 }
 
 // ============================================
@@ -222,7 +226,7 @@ Format as:
 
 Professional tone. Use Markdown.`;
 
-  return await queryOllama(prompt, { temperature: 0.3 });
+  return await queryOpenRouter(prompt, { temperature: 0.3 });
 }
 
 // ============================================
@@ -236,7 +240,7 @@ async function chat(userMessage, context = {}) {
 
   const prompt = `${contextBlock}\n\nUser message: ${userMessage}`;
 
-  return await queryOllama(prompt, { temperature: 0.6 });
+  return await queryOpenRouter(prompt, { temperature: 0.6 });
 }
 
 // ============================================
@@ -245,33 +249,18 @@ async function chat(userMessage, context = {}) {
 
 async function checkOllamaHealth() {
   try {
-    const url = new URL('/api/tags', OLLAMA_HOST);
-    
-    return new Promise((resolve) => {
-      const req = http.request(url, { method: 'GET' }, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try {
-            const result = JSON.parse(data);
-            resolve({
-              status: 'ok',
-              models: result.models?.map(m => m.name) || [],
-              selected_model: MODEL,
-              system_prompt: 'R3nzo AML sandbox active'
-            });
-          } catch (e) {
-            resolve({ status: 'error', message: 'Invalid response' });
-          }
-        });
-      });
-      
-      req.on('error', () => {
-        resolve({ status: 'error', message: 'Ollama not reachable' });
-      });
-      
-      req.end();
-    });
+    if (!OPENROUTER_API_KEY) {
+      return { status: 'error', message: 'OPENROUTER_API_KEY not set' };
+    }
+    // Quick test call to verify the API key works
+    const testResponse = await queryOpenRouter('Say OK', { maxTokens: 10 });
+    return {
+      status: 'ok',
+      provider: 'OpenRouter',
+      models: [MODEL],
+      selected_model: MODEL,
+      system_prompt: 'R3nzo AML sandbox active'
+    };
   } catch (e) {
     return { status: 'error', message: e.message };
   }
@@ -283,5 +272,5 @@ export {
   generateReport,
   chat,
   checkOllamaHealth,
-  queryOllama
+  queryOpenRouter
 };
