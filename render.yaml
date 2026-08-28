@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: r3nzo-aml-agent
+    runtime: node
+    buildCommand: npm install
+    startCommand: node api/server.js
+    envVars:
+      - key: T3N_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
