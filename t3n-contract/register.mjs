@@ -114,14 +114,16 @@ async function main() {
   const contractId = regResult.contract_id;
   console.log(`✅ Contract registered! ID: ${contractId}`);
 
-  // 6. Create sanctions KV map
-  const tenantId = tenantDid.slice("did:t3n:".length);
-  const sanctionsMapName = `z:${tenantId}:sanctions`;
-
+  // 6. Create sanctions KV map with ACLs
   console.log("🗄️  Creating sanctions KV map...");
   try {
-    await tenant.maps.create(sanctionsMapName);
-    console.log(`✅ Map created: ${sanctionsMapName}`);
+    await tenant.maps.create({
+      tail: "sanctions",
+      visibility: "private",
+      writers: { only: [contractId] },
+      readers: { only: [contractId] },
+    });
+    console.log("✅ Map created: sanctions");
   } catch (e) {
     console.log(`ℹ️  Map may already exist: ${e.message}`);
   }
@@ -148,14 +150,23 @@ async function main() {
 
   console.log(`📤 Seeding ${entries.length} sanctions entries into TEE...`);
   const entriesJson = JSON.stringify(entries);
-  await tenant.maps.set(sanctionsMapName, "ofac_eth", Buffer.from(entriesJson));
+  
+  // Use executeControl to write data into the map
+  await tenant.executeControl("map-entry-set", {
+    map: "sanctions",
+    key: "ofac_eth",
+    value: Buffer.from(entriesJson),
+  });
   console.log("✅ Sanctions data seeded into TEE KV store!");
 
-  // 8. Verify
+  // 8. Verify by reading back
   console.log("\n🔍 Verifying...");
-  const verifyData = await tenant.maps.get(sanctionsMapName, "ofac_eth");
-  if (verifyData) {
-    const parsed = JSON.parse(Buffer.from(verifyData).toString());
+  const verifyResult = await tenant.executeControl("map-entry-get", {
+    map: "sanctions",
+    key: "ofac_eth",
+  });
+  if (verifyResult) {
+    const parsed = JSON.parse(Buffer.from(verifyResult.value).toString());
     console.log(`✅ Verified: ${parsed.length} addresses in TEE KV store`);
   }
 

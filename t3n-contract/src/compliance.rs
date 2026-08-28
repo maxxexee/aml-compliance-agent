@@ -2,6 +2,10 @@
 //!
 //! All data (sanctions lists, risk thresholds, scoring weights) stays encrypted
 //! inside the Trusted Execution Environment. Only the verdict comes out.
+//!
+//! Sanctions data is stored in chunks of 2 addresses each in the TEE KV store.
+//! The contract reads a header entry to know how many chunks exist, then reads
+//! each chunk to build the full sanctions list.
 
 use alloc::format;
 use alloc::string::{String, ToString};
@@ -82,18 +86,6 @@ pub struct SanctionsInfo {
 }
 
 // ============================================
-// Risk scoring weights (inside TEE — never exposed)
-// ============================================
-
-const WEIGHT_SANCTIONED: u32 = 40;
-const WEIGHT_MIXER: u32 = 25;
-const WEIGHT_JURISDICTION: u32 = 20;
-const WEIGHT_PATTERNS: u32 = 15;
-
-// High-risk jurisdictions
-const HIGH_RISK_JURISDICTIONS: &[&str] = &["IR", "KP", "SY", "CU", "VE", "MM", "RU", "BY"];
-
-// ============================================
 // KV Store access — read sanctions from TEE-encrypted map
 // ============================================
 
@@ -103,26 +95,11 @@ use crate::host::{
     tenant::tenant_context,
 };
 
-/// Get the tenant's KV map name for sanctions data
-#[cfg(target_arch = "wasm32")]
-fn get_sanctions_map_name() -> String {
-    let tid = tenant_context::tenant_did();
-    format!("z:{}:sanctions", hex::encode(&tid))
-}
-
-/// Load sanctioned addresses from the TEE-encrypted KV store
-#[cfg(target_arch = "wasm32")]
-fn load_sanctions_from_kv() -> Result<Vec<(String, String, String, String)>, String> {
-    let map_name = get_sanctions_map_name();
-    
-    let data = kv_store::get(&map_name, b"ofac_eth")
-        .map_err(|e| format!("KV read failed: {e}"))?
-        .ok_or("sanctions data not found in TEE KV store")?;
-    
-    let entries: Vec<SanctionsEntry> = serde_json::from_slice(&data)
-        .map_err(|e| format!("Failed to parse sanctions data: {e}"))?;
-    
-    Ok(entries.into_iter().map(|e| (e.address, e.name, e.source, e.category)).collect())
+#[derive(Deserialize)]
+struct HeaderEntry {
+    total_addresses: u32,
+    total_chunks: u32,
+    chunk_size: u32,
 }
 
 #[derive(Deserialize)]
@@ -131,6 +108,44 @@ struct SanctionsEntry {
     name: String,
     source: String,
     category: String,
+}
+
+/// Get the tenant's KV map name for sanctions data
+#[cfg(target_arch = "wasm32")]
+fn get_sanctions_map_name() -> String {
+    let tid = tenant_context::tenant_did();
+    format!("z:{}:ofac", hex::encode(&tid))
+}
+
+/// Load sanctioned addresses from the TEE-encrypted KV store (chunked format)
+#[cfg(target_arch = "wasm32")]
+fn load_sanctions_from_kv() -> Result<Vec<SanctionsEntry>, String> {
+    let map_name = get_sanctions_map_name();
+
+    // Read header to know how many chunks
+    let header_data = kv_store::get(&map_name, b"header")
+        .map_err(|e| format!("KV header read failed: {e}"))?
+        .ok_or("header not found in TEE KV store")?;
+
+    let header: HeaderEntry = serde_json::from_slice(&header_data)
+        .map_err(|e| format!("Failed to parse header: {e}"))?;
+
+    let mut all_entries = Vec::new();
+
+    // Read each chunk
+    for i in 0..header.total_chunks {
+        let key = format!("c{}", i);
+        let chunk_data = kv_store::get(&map_name, key.as_bytes())
+            .map_err(|e| format!("KV chunk {} read failed: {e}", i))?
+            .ok_or_else(|| format!("chunk {} not found", i))?;
+
+        let chunk: Vec<SanctionsEntry> = serde_json::from_slice(&chunk_data)
+            .map_err(|e| format!("Failed to parse chunk {}: {e}", i))?;
+
+        all_entries.extend(chunk);
+    }
+
+    Ok(all_entries)
 }
 
 // ============================================
@@ -151,10 +166,10 @@ pub fn check_wallet(input: &[u8]) -> Result<Vec<u8>, String> {
 
     // Load sanctions data from TEE KV store
     let sanctions_data = load_sanctions_from_kv()?;
-    
+
     // Check if wallet is sanctioned
-    let sanctions_match = sanctions_data.iter().find(|(addr, _, _, _)| addr.to_lowercase() == wallet_lower);
-    
+    let sanctions_match = sanctions_data.iter().find(|entry| entry.address.to_lowercase() == wallet_lower);
+
     let mut flags = Vec::new();
     let mut breakdown = RiskBreakdown {
         sanctioned: 0,
@@ -163,18 +178,19 @@ pub fn check_wallet(input: &[u8]) -> Result<Vec<u8>, String> {
         patterns: 0,
     };
 
-    if let Some((_, name, source, category)) = sanctions_match {
-        flags.push(format!("directly_sanctioned ({name})"));
+    if let Some(entry) = sanctions_match {
+        flags.push(format!("directly_sanctioned ({})", entry.name));
         breakdown.sanctioned = 100;
-        
-        if category == "mixer" {
+
+        if entry.category == "mixer" {
             flags.push("known_mixer_address".to_string());
             breakdown.mixer = 90;
         }
     }
 
     // Check jurisdiction risk
-    if HIGH_RISK_JURISDICTIONS.contains(&req.jurisdiction.as_str()) {
+    let high_risk = ["IR", "KP", "SY", "CU", "VE", "MM", "RU", "BY"];
+    if high_risk.contains(&req.jurisdiction.as_str()) {
         flags.push("high_risk_jurisdiction".to_string());
         breakdown.jurisdiction = 80;
     }
@@ -192,6 +208,7 @@ pub fn check_wallet(input: &[u8]) -> Result<Vec<u8>, String> {
     #[cfg(not(target_arch = "wasm32"))]
     let tenant_did = "did:t3n:test".to_string();
 
+    #[cfg(target_arch = "wasm32")]
     let _ = logging::info(&format!(
         "Compliance check: {} → {} (score: {})",
         &req.wallet, &status, risk_score
@@ -203,10 +220,10 @@ pub fn check_wallet(input: &[u8]) -> Result<Vec<u8>, String> {
         risk_score,
         flags,
         breakdown,
-        sanctions_match: sanctions_match.map(|(_, name, source, category)| SanctionsMatch {
-            name: name.to_string(),
-            source: source.to_string(),
-            category: category.to_string(),
+        sanctions_match: sanctions_match.map(|entry| SanctionsMatch {
+            name: entry.name.clone(),
+            source: entry.source.clone(),
+            category: entry.category.clone(),
         }),
         t3n_attested: true,
         tenant_did,
@@ -272,7 +289,7 @@ pub fn get_sanctions_info() -> Result<Vec<u8>, String> {
         total_addresses: sanctions_data.len() as u32,
         sources: vec!["OFAC SDN List (US Treasury)".to_string()],
         loaded_at: cluster_timestamp(),
-        note: "Sanctions data stored in TEE-encrypted KV map".to_string(),
+        note: "Sanctions data stored in TEE-encrypted KV map (chunked)".to_string(),
     };
 
     serde_json::to_vec(&info).map_err(|e| e.to_string())
@@ -283,10 +300,15 @@ pub fn get_sanctions_info() -> Result<Vec<u8>, String> {
 // ============================================
 
 fn calculate_risk_score(breakdown: &RiskBreakdown, is_sanctioned: bool) -> u32 {
-    let weighted = (breakdown.sanctioned * WEIGHT_SANCTIONED
-        + breakdown.mixer * WEIGHT_MIXER
-        + breakdown.jurisdiction * WEIGHT_JURISDICTION
-        + breakdown.patterns * WEIGHT_PATTERNS)
+    const W_SANCTIONED: u32 = 40;
+    const W_MIXER: u32 = 25;
+    const W_JURISDICTION: u32 = 20;
+    const W_PATTERNS: u32 = 15;
+
+    let weighted = (breakdown.sanctioned * W_SANCTIONED
+        + breakdown.mixer * W_MIXER
+        + breakdown.jurisdiction * W_JURISDICTION
+        + breakdown.patterns * W_PATTERNS)
         / 100;
 
     // Direct sanctions match = automatic BLOCK threshold
@@ -307,11 +329,8 @@ fn determine_status(score: u32) -> String {
     }
 }
 
-/// Get cluster timestamp (from TEE host)
 #[cfg(target_arch = "wasm32")]
 fn cluster_timestamp() -> String {
-    // cluster_timestamp may not be available in all T3N versions
-    // Use a fallback if the function doesn't exist
     "2026-01-01T00:00:00Z".to_string()
 }
 
