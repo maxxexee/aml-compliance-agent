@@ -32,16 +32,45 @@ const T3N_API_KEY = process.env.T3N_API_KEY!;
 const ENVIRONMENT = (process.env.T3N_ENVIRONMENT as "testnet" | "production") || "testnet";
 
 // ============================================
-// Sanctions Database (hardcoded for TEE operation)
+// Sanctions Database — loaded from real OFAC SDN list
 // ============================================
-const SANCTIONED_ADDRESSES: Record<string, { name: string; source: string; category: string }> = {
-  "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b": { name: "Tornado Cash", source: "OFAC", category: "mixer" },
-  "0xba214c1c1928a32bbe78e45b7e9927895c80d10b": { name: "Tornado Cash", source: "OFAC", category: "mixer" },
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+
+// Known entity mappings for addresses in the OFAC list
+const KNOWN_ENTITIES: Record<string, { name: string; source: string; category: string }> = {
   "0x098b716b8aaf21512996dc57eb0615e2383e2f96": { name: "Lazarus Group", source: "OFAC", category: "hacking" },
+  "0x7f367fc41522ce07553e823bf3be79a889debe1b": { name: "Tornado Cash", source: "OFAC", category: "mixer" },
+  "0x8589427373d6d87e9e77432797806d944876d931": { name: "Sinbad Mixer", source: "OFAC", category: "mixer" },
+  "0xa0e1c163964207453df4edbe296659196d7823c8": { name: "Garantex Exchange", source: "OFAC", category: "exchange" },
   "0xd8579921026d261b853607856136bfc6a8a3b981": { name: "Sanctioned Entity", source: "OFAC", category: "sanctioned" },
-  "0x7f367f4b1cd24b271246e8608ff55a06e09abb28": { name: "Sinbad Mixer", source: "OFAC", category: "mixer" },
-  "0xa0e1c163964207453df4edbe296659196d7823c8": { name: "Sinbad Mixer", source: "OFAC", category: "mixer" },
 };
+
+// Load real OFAC addresses
+let SANCTIONED_ADDRESSES: Record<string, { name: string; source: string; category: string }> = {};
+
+function loadSanctions() {
+  const ethFile = path.join(DATA_DIR, 'ofac_eth.txt');
+  if (!fs.existsSync(ethFile)) {
+    console.error('⚠️  OFAC data not found:', ethFile);
+    return;
+  }
+  const content = fs.readFileSync(ethFile, 'utf-8');
+  const lines = content.split('\n').filter(l => l.trim());
+  for (const line of lines) {
+    const addr = line.trim().toLowerCase();
+    if (!addr.startsWith('0x') || addr.length !== 42) continue;
+    const known = KNOWN_ENTITIES[addr];
+    SANCTIONED_ADDRESSES[addr] = known || { name: 'OFAC Sanctioned Address', source: 'OFAC SDN', category: 'sanctioned' };
+  }
+  console.error(`✅ MCP: Loaded ${Object.keys(SANCTIONED_ADDRESSES).length} sanctioned ETH addresses`);
+}
+
+loadSanctions();
 
 const HIGH_RISK_JURISDICTIONS = ["IR", "KP", "SY", "CU", "VE", "MM", "RU", "BY"];
 
@@ -118,6 +147,10 @@ interface ComplianceResult {
 function checkSanctions(wallet: string): { name: string; source: string; category: string } | null {
   const normalized = wallet.toLowerCase();
   return SANCTIONED_ADDRESSES[normalized] || null;
+}
+
+function getSanctionsCount(): number {
+  return Object.keys(SANCTIONED_ADDRESSES).length;
 }
 
 function analyzeRiskFactors(wallet: string): ComplianceResult["breakdown"] {
@@ -339,10 +372,10 @@ server.tool(
           type: "text" as const,
           text: JSON.stringify(
             {
-              source: "OFAC SDN List (cached for TEE operation)",
+              source: "OFAC SDN List (US Treasury) — real data",
               count: sanctionsList.length,
-              addresses: sanctionsList,
-              note: "This is a cached subset. Production deployments should load the full OFAC CSV.",
+              update_url: "https://github.com/0xB10C/ofac-sanctioned-digital-currency-addresses",
+              sample: sanctionsList.slice(0, 10),
             },
             null,
             2

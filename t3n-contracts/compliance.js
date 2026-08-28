@@ -168,13 +168,25 @@ function calculateRiskScore(sanctionsResult, txData) {
 }
 
 /**
- * Import sanctions data
+ * Import real sanctions and on-chain data
  */
-import { checkSanctioned as checkSanctionedExternal, checkJurisdiction as checkJurisdictionExternal, SANCTIONED_ADDRESSES, MIXER_ADDRESSES } from '../api/sanctions.js';
+import { checkSanctioned as checkSanctionedReal, getSanctionsSummary } from '../api/sanctions-real.js';
+import { analyzeWallet } from '../api/onchain-real.js';
 
-// Alias for use within TEE
-const checkSanctioned = checkSanctionedExternal;
-const checkJurisdiction = checkJurisdictionExternal;
+// Real sanctions check wrapper
+function checkSanctioned(address) {
+  const result = checkSanctionedReal(address);
+  return {
+    sanctioned: !!result,
+    mixer: result?.type === 'mixer',
+    entity: result,
+  };
+}
+
+function checkJurisdiction(jurisdiction) {
+  const highRisk = ['IR', 'KP', 'SY', 'CU', 'VE', 'MM', 'RU', 'BY'];
+  return { highRisk: highRisk.includes(jurisdiction) };
+}
 
 /**
  * Create audit trail (inside TEE)

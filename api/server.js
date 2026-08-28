@@ -12,8 +12,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initT3N, runComplianceCheck, getStatus } from '../t3n-contracts/compliance.js';
 import { parseUserRequest, explainRiskResult, generateReport, chat, checkOllamaHealth } from './agent.js';
-import { checkSanctioned, checkJurisdiction, getSanctionsSummary } from './sanctions.js';
-import { analyzeWallet, quickRiskAssessment } from './onchain.js';
+import { checkSanctioned, getSanctionsSummary } from './sanctions-real.js';
+
+// Wrapper for jurisdiction check
+function checkJurisdiction(jurisdiction) {
+  const highRisk = ['IR', 'KP', 'SY', 'CU', 'VE', 'MM', 'RU', 'BY'];
+  return { highRisk: highRisk.includes(jurisdiction) };
+}
+import { analyzeWallet, quickRiskAssessment } from './onchain-real.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -301,15 +307,8 @@ app.get('/api/agent/health', async (req, res) => {
 // ============================================
 
 app.get('/api/sanctions', (req, res) => {
-  // In production, this would query live sanctions data
-  // For demo, return sample data
-  
-  res.json({
-    sources: ['OFAC SDN', 'EU Sanctions', 'UN Sanctions'],
-    last_updated: new Date().toISOString(),
-    total_entries: 12500,
-    note: 'This is demo data. Production would query live APIs.'
-  });
+  const summary = getSanctionsSummary();
+  res.json(summary);
 });
 
 // ============================================
@@ -344,33 +343,31 @@ function addToAuditLog(entry) {
 async function getTransactionData(wallet) {
   console.log(`🔍 Fetching on-chain data for: ${wallet}`);
   
-  // Get comprehensive wallet analysis
+  // Get real on-chain analysis from Ethereum RPC
   const analysis = await analyzeWallet(wallet);
   
-  // Check sanctions
+  // Check sanctions against real OFAC list
   const sanctionsCheck = checkSanctioned(wallet);
   
-  // Get jurisdiction (simulated - in production, use GeoIP or wallet metadata)
-  const jurisdiction = 'US'; // Default to US for demo
-  const jurisdictionCheck = checkJurisdiction(jurisdiction);
-  
-  // Combine all data
+  // Combine into format compliance engine expects
   return {
     wallet,
-    balance: parseFloat(analysis.balance.balance),
-    volume: analysis.patterns.totalVolume,
-    interactions: [
-      ...analysis.interactions.mixers.map(m => m.address),
-      ...analysis.interactions.exchanges.map(e => e.address)
-    ],
-    jurisdiction: jurisdiction,
+    balance: analysis?.on_chain?.balance_ether || 0,
+    volume: 0,
+    interactions: [],
+    jurisdiction: 'GLOBAL',
     first_seen: '2024-01-01',
     last_activity: new Date().toISOString(),
-    sanctions: sanctionsCheck,
-    jurisdictionRisk: jurisdictionCheck,
-    patterns: analysis.patterns,
-    transactionCount: analysis.transactions.length,
-    riskFactors: analysis.patterns.riskFactors
+    sanctions: sanctionsCheck ? { sanctioned: true, entity: sanctionsCheck } : { sanctioned: false },
+    jurisdictionRisk: { highRisk: false },
+    patterns: {
+      totalVolume: 0,
+      riskFactors: analysis?.flags || [],
+      patterns_found: analysis?.on_chain?.patterns_found || [],
+    },
+    transactionCount: analysis?.on_chain?.transaction_count || 0,
+    riskFactors: analysis?.flags || [],
+    on_chain_data: analysis?.on_chain,
   };
 }
 
