@@ -454,6 +454,223 @@
     font-size: 11px;
     color: var(--dim);
   }
+  /* ===== CHAT UI ===== */
+  .chat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    height: 520px;
+    overflow: hidden;
+  }
+  .chat-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--card-2);
+  }
+  .chat-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), #8fd3c7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .chat-header-info h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .chat-header-info span {
+    font-size: 11.5px;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .chat-header-info span::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+  }
+  .chat-messages::-webkit-scrollbar {
+    width: 5px;
+  }
+  .chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+  }
+  .chat-msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    word-wrap: break-word;
+    animation: msgIn 0.25s ease-out;
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chat-msg.user {
+    align-self: flex-end;
+    background: var(--blue);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-msg.r3nzo {
+    align-self: flex-start;
+    background: #1c1c22;
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .chat-msg.r3nzo .msg-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--blue);
+    margin-bottom: 4px;
+  }
+  .chat-msg pre {
+    background: #0a0a0c;
+    padding: 10px 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin: 8px 0;
+    color: var(--muted);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .chat-msg code {
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+  .chat-typing {
+    align-self: flex-start;
+    padding: 10px 14px;
+    background: #1c1c22;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    border-bottom-left-radius: 4px;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .chat-typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: typingBounce 1.2s infinite;
+  }
+  .chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+  .chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+  .chat-input-bar {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--card-2);
+  }
+  .chat-input-bar input {
+    flex: 1;
+    padding: 10px 14px;
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Poppins', sans-serif;
+    font-size: 13.5px;
+  }
+  .chat-input-bar input:focus {
+    outline: none;
+    border-color: var(--blue);
+  }
+  .chat-input-bar button {
+    padding: 10px 18px;
+    background: var(--blue);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 500;
+    transition: opacity 0.15s;
+  }
+  .chat-input-bar button:hover {
+    opacity: 0.85;
+  }
+  .chat-input-bar button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .chat-welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim);
+    text-align: center;
+    padding: 20px;
+    gap: 8px;
+  }
+  .chat-welcome .icon {
+    font-size: 32px;
+    margin-bottom: 4px;
+  }
+  .chat-welcome p {
+    font-size: 13px;
+    max-width: 260px;
+    line-height: 1.5;
+  }
+  .chat-welcome .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    justify-content: center;
+  }
+  .chat-welcome .suggestions button {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--muted);
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .chat-welcome .suggestions button:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: rgba(92,178,238,0.08);
+  }
   .chat-message {
     white-space: pre-wrap;
     line-height: 1.5;
@@ -472,6 +689,9 @@
   @media (max-width: 760px) {
     .demo-section {
       grid-template-columns: 1fr;
+    }
+    .chat-card {
+      height: 460px;
     }
   }
 
@@ -748,13 +968,29 @@
           <div id="results" class="demo-results" style="display: none;"></div>
         </div>
         
-        <div class="demo-card">
-          <h3>💬 Chat with R3nzo</h3>
-          <form id="chat-form" class="demo-form">
-            <input type="text" id="chat-input" placeholder="Ask about compliance, risk scores, etc." class="demo-input">
-            <button type="submit" class="btn btn-dark">Send</button>
-          </form>
-          <div id="chat-results" class="demo-results" style="display: none;"></div>
+        <div class="chat-card">
+          <div class="chat-header">
+            <div class="chat-avatar">🤖</div>
+            <div class="chat-header-info">
+              <h3>R3nzo</h3>
+              <span>Online</span>
+            </div>
+          </div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-welcome" id="chat-welcome">
+              <div class="icon">🛡️</div>
+              <p>I'm R3nzo — your AML compliance agent. Ask me anything about risk scores, sanctions, or compliance.</p>
+              <div class="suggestions">
+                <button onclick="sendSuggestion('What is OFAC?')">What is OFAC?</button>
+                <button onclick="sendSuggestion('Check wallet 0xd8579921026d261b853607856136bfc6a8a3b981')">Check a wallet</button>
+                <button onclick="sendSuggestion('Explain risk scores')">Explain risk scores</button>
+              </div>
+            </div>
+          </div>
+          <div class="chat-input-bar">
+            <input type="text" id="chat-input" placeholder="Ask R3nzo..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}">
+            <button id="chat-send" onclick="sendChat()">Send</button>
+          </div>
         </div>
       </div>
       
@@ -903,24 +1139,109 @@
     }
   }
 
-  // Chat with R3nzo
-  async function chatWithR3nzo(message) {
-    const chatDiv = document.getElementById('chat-results');
-    chatDiv.innerHTML = '<div class="loading">💬 R3nzo is thinking...</div>';
-    chatDiv.style.display = 'block';
-    
+  // ===== CHAT SYSTEM =====
+  const chatHistory = [];
+  let chatBusy = false;
+
+  function scrollChat() {
+    const el = document.getElementById('chat-messages');
+    requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+  }
+
+  function addChatMsg(role, html) {
+    const welcome = document.getElementById('chat-welcome');
+    if (welcome) welcome.remove();
+
+    const el = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = `chat-msg ${role}`;
+    if (role === 'r3nzo') {
+      div.innerHTML = `<div class="msg-label">R3nzo</div>${html}`;
+    } else {
+      div.innerHTML = html;
+    }
+    el.appendChild(div);
+    scrollChat();
+    return div;
+  }
+
+  function addTyping() {
+    const el = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'chat-typing';
+    div.id = 'typing-indicator';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    el.appendChild(div);
+    scrollChat();
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+  }
+
+  function formatChatText(text) {
+    // Escape HTML
+    let s = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // Bold: **text**
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Inline code: `text`
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Line breaks
+    s = s.replace(/\n/g, '<br>');
+    return s;
+  }
+
+  function sendSuggestion(text) {
+    document.getElementById('chat-input').value = text;
+    sendChat();
+  }
+
+  async function sendChat() {
+    if (chatBusy) return;
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    chatBusy = true;
+    input.value = '';
+    document.getElementById('chat-send').disabled = true;
+
+    addChatMsg('user', msg);
+    chatHistory.push({ role: 'user', content: msg });
+
+    addTyping();
+
     try {
       const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message })
+        body: JSON.stringify({ message: msg })
       });
-      
       const data = await response.json();
-      displayChatResponse(data);
+      removeTyping();
+
+      let reply = '';
+      if (data.type === 'chat') {
+        reply = data.message;
+      } else if (data.type === 'wallet_check') {
+        const r = data.result;
+        const statusEmoji = r.status === 'APPROVE' ? '✅' : r.status === 'REVIEW' ? '⚠️' : '❌';
+        reply = `${statusEmoji} **${r.status}** — Risk Score: **${r.risk_score}/100**\n\nWallet: ${r.wallet}\nFlags: ${r.flags.length ? r.flags.join(', ') : 'None'}\nAudit ID: ${r.audit_id}\n\n${data.explanation || ''}`;
+      } else {
+        reply = JSON.stringify(data, null, 2);
+      }
+
+      chatHistory.push({ role: 'assistant', content: reply });
+      addChatMsg('r3nzo', formatChatText(reply));
     } catch (error) {
-      chatDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+      removeTyping();
+      addChatMsg('r3nzo', `<span style="color:var(--red)">⚠️ Connection error: ${error.message}</span>`);
     }
+
+    chatBusy = false;
+    document.getElementById('chat-send').disabled = false;
+    input.focus();
   }
 
   // Display wallet check results
@@ -948,25 +1269,6 @@
     `;
   }
 
-  // Display chat response
-  function displayChatResponse(data) {
-    const chatDiv = document.getElementById('chat-results');
-    
-    if (data.type === 'chat') {
-      chatDiv.innerHTML = `<div class="chat-message">${data.message}</div>`;
-    } else if (data.type === 'wallet_check') {
-      chatDiv.innerHTML = `
-        <div class="chat-message">
-          <h4>Wallet Check Result</h4>
-          <pre>${JSON.stringify(data.result, null, 2)}</pre>
-          <div class="explanation">${data.explanation}</div>
-        </div>
-      `;
-    } else {
-      chatDiv.innerHTML = `<div class="chat-message"><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
-    }
-  }
-
   // Event listeners
   document.addEventListener('DOMContentLoaded', () => {
     // Wallet check form
@@ -977,18 +1279,6 @@
         const input = document.getElementById('wallet-input');
         if (input.value) {
           checkWallet(input.value);
-        }
-      });
-    }
-    
-    // Chat form
-    const chatForm = document.getElementById('chat-form');
-    if (chatForm) {
-      chatForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const input = document.getElementById('chat-input');
-        if (input.value) {
-          chatWithR3nzo(input.value);
         }
       });
     }

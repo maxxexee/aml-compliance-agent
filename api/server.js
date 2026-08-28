@@ -7,14 +7,21 @@
 
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initT3N, runComplianceCheck, getStatus } from '../t3n-contracts/compliance.js';
 import { parseUserRequest, explainRiskResult, generateReport, chat, checkOllamaHealth } from './agent.js';
 import { checkSanctioned, checkJurisdiction, getSanctionsSummary } from './sanctions.js';
 import { analyzeWallet, quickRiskAssessment } from './onchain.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve the web dashboard
+app.use(express.static(path.join(__dirname, '..', 'web', 'pages')));
 
 const PORT = process.env.PORT || 3001;
 const T3N_API_KEY = process.env.T3N_API_KEY;
