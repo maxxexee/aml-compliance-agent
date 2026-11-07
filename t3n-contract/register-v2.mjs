@@ -1,5 +1,5 @@
 /**
- * Register v0.2.1 of the TEE contract with correct name
+ * Register v0.2.2 of the TEE contract with the corrected OFAC map lookup
  */
 
 import path from "path";
@@ -51,13 +51,13 @@ async function main() {
     console.log(`   Not found: ${e.message?.substring(0, 100)}`);
   }
 
-  // Register v0.2.1 — must be higher than 0.2.0
-  console.log("\n🚀 Registering v0.2.1...");
+  // Register v0.2.2 — reads from 'ofac_eth' key directly (no chunking)
+  console.log("\n🚀 Registering v0.2.2...");
   try {
     const result = await tenant.contracts.register({
       name: "aml-compliance",
-      version: "0.2.1",
-      description: "AML compliance — reads OFAC data from TEE KV map 'ofac'",
+      version: "0.2.2",
+      description: "AML compliance: reads OFAC data from TEE KV 'ofac_eth' key directly",
       wasm: wasmBytes,
       entrypoint: "aml-compliance:main",
     });

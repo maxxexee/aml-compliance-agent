@@ -1,11 +1,12 @@
-//! AML Compliance logic — runs entirely inside the TEE enclave.
+//! AML Compliance logic: runs entirely inside the TEE enclave.
 //!
 //! All data (sanctions lists, risk thresholds, scoring weights) stays encrypted
 //! inside the Trusted Execution Environment. Only the verdict comes out.
 //!
-//! Sanctions data is stored in chunks of 2 addresses each in the TEE KV store.
-//! The contract reads a header entry to know how many chunks exist, then reads
-//! each chunk to build the full sanctions list.
+//! Sanctions data is read from the tenant's z:<tid>:ofac KV map. The primary
+//! key is ofac_eth, which holds the full sanctions array. If that key is
+//! absent, the contract falls back to chunked layouts (header plus c0, c1, ...
+//! or chunk_0, chunk_1, ...).
 
 use alloc::format;
 use alloc::string::{String, ToString};
@@ -96,13 +97,6 @@ use crate::host::{
 };
 
 #[derive(Deserialize)]
-struct HeaderEntry {
-    total_addresses: u32,
-    total_chunks: u32,
-    chunk_size: u32,
-}
-
-#[derive(Deserialize)]
 struct SanctionsEntry {
     address: String,
     name: String,
@@ -117,35 +111,63 @@ fn get_sanctions_map_name() -> String {
     format!("z:{}:ofac", hex::encode(&tid))
 }
 
-/// Load sanctioned addresses from the TEE-encrypted KV store (chunked format)
+/// Load sanctioned addresses from the TEE-encrypted KV store.
+/// Reads the full array from the "ofac_eth" key.
 #[cfg(target_arch = "wasm32")]
 fn load_sanctions_from_kv() -> Result<Vec<SanctionsEntry>, String> {
     let map_name = get_sanctions_map_name();
 
-    // Read header to know how many chunks
-    let header_data = kv_store::get(&map_name, b"header")
-        .map_err(|e| format!("KV header read failed: {e}"))?
-        .ok_or("header not found in TEE KV store")?;
-
-    let header: HeaderEntry = serde_json::from_slice(&header_data)
-        .map_err(|e| format!("Failed to parse header: {e}"))?;
-
-    let mut all_entries = Vec::new();
-
-    // Read each chunk
-    for i in 0..header.total_chunks {
-        let key = format!("c{}", i);
-        let chunk_data = kv_store::get(&map_name, key.as_bytes())
-            .map_err(|e| format!("KV chunk {} read failed: {e}", i))?
-            .ok_or_else(|| format!("chunk {} not found", i))?;
-
-        let chunk: Vec<SanctionsEntry> = serde_json::from_slice(&chunk_data)
-            .map_err(|e| format!("Failed to parse chunk {}: {e}", i))?;
-
-        all_entries.extend(chunk);
+    // Try reading the full list from "ofac_eth" key (seeded by seed scripts)
+    if let Ok(Some(data)) = kv_store::get(&map_name, b"ofac_eth") {
+        let entries: Vec<SanctionsEntry> = serde_json::from_slice(&data)
+            .map_err(|e| format!("Failed to parse ofac_eth: {e}"))?;
+        return Ok(entries);
     }
 
-    Ok(all_entries)
+    // Fallback: try chunked format (header + c0, c1, ...)
+    // This handles data seeded with seed-chunks.mjs
+    if let Ok(Some(header_data)) = kv_store::get(&map_name, b"header") {
+        #[derive(Deserialize)]
+        struct HeaderEntry {
+            total_chunks: u32,
+        }
+
+        let header: HeaderEntry = serde_json::from_slice(&header_data)
+            .map_err(|e| format!("Failed to parse header: {e}"))?;
+
+        let mut all_entries = Vec::new();
+        for i in 0..header.total_chunks {
+            let key = format!("c{}", i);
+            if let Ok(Some(chunk_data)) = kv_store::get(&map_name, key.as_bytes()) {
+                if let Ok(chunk) = serde_json::from_slice::<Vec<SanctionsEntry>>(&chunk_data) {
+                    all_entries.extend(chunk);
+                }
+            }
+        }
+        if !all_entries.is_empty() {
+            return Ok(all_entries);
+        }
+    }
+
+    // Fallback: try chunk_0, chunk_1, ... format (from seed-chunks.mjs)
+    let mut all_entries = Vec::new();
+    for i in 0..100 {
+        let key = format!("chunk_{}", i);
+        if let Ok(Some(chunk_data)) = kv_store::get(&map_name, key.as_bytes()) {
+            if let Ok(chunk) = serde_json::from_slice::<Vec<SanctionsEntry>>(&chunk_data) {
+                all_entries.extend(chunk);
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+    if !all_entries.is_empty() {
+        return Ok(all_entries);
+    }
+
+    Err("sanctions data not found in TEE KV store".to_string())
 }
 
 // ============================================
@@ -289,7 +311,7 @@ pub fn get_sanctions_info() -> Result<Vec<u8>, String> {
         total_addresses: sanctions_data.len() as u32,
         sources: vec!["OFAC SDN List (US Treasury)".to_string()],
         loaded_at: cluster_timestamp(),
-        note: "Sanctions data stored in TEE-encrypted KV map (chunked)".to_string(),
+        note: "Sanctions data stored in TEE-encrypted KV map (ofac_eth with chunked fallback)".to_string(),
     };
 
     serde_json::to_vec(&info).map_err(|e| e.to_string())

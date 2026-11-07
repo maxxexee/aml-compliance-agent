@@ -1,11 +1,11 @@
-//! z-aml-compliance v0.1.0 — AML compliance checking inside Terminal 3 TEE.
+//! z-aml-compliance v0.2.2: AML compliance checking inside Terminal 3 TEE.
 //!
 //! This contract runs inside the Trusted Execution Environment:
 //!   - check-wallet:  sanctions matching + risk scoring for a single wallet
 //!   - check-batch:   batch compliance checking
 //!   - get-sanctions-info: summary of loaded sanctions data
 //!
-//! Sanctions data is stored in the z:<tid>:sanctions KV map (encrypted at rest).
+//! Sanctions data is stored in the z:<tid>:ofac KV map (encrypted at rest).
 //! All compliance logic runs inside the enclave — raw data never leaves.
 //!
 //! # Host-capability requirements
@@ -21,14 +21,14 @@
 //! Before first use, the tenant SDK must create the sanctions KV map:
 //! ```text
 //! // Via the tenant SDK (before contract first use):
-//! z_sdk.kv("sanctions").set("ofac_eth", <sanctions JSON bytes>)
+//! z_sdk.kv("ofac").set("ofac_eth", <sanctions JSON bytes>)
 //! ```
 #![warn(clippy::style, missing_debug_implementations)]
 #![cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 
 extern crate alloc;
 
-pub const CONTRACT_VERSION: &str = "0.1.0";
+pub const CONTRACT_VERSION: &str = "0.2.2";
 
 wit_bindgen::generate!({
     world: "aml-compliance",

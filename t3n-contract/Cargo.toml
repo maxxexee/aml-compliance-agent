@@ -1,6 +1,6 @@
 [package]
 name = "z-aml-compliance"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "AML compliance checking TEE contract for Terminal 3 — sanctions matching + risk scoring inside the enclave"
 license = "MIT"
