@@ -42,9 +42,10 @@ Run the endpoint integration checks against a local server:
 npm run test:integration
 ```
 
-For contract changes, build the WASM target:
+For contract changes, run the tests and build the WASM target:
 
 ```bash
+cargo test --manifest-path t3n-contract/Cargo.toml
 rustup target add wasm32-wasip2
 cargo build --manifest-path t3n-contract/Cargo.toml --target wasm32-wasip2 --release
 ```

@@ -40,6 +40,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-wasip2
+      - run: cargo test --manifest-path t3n-contract/Cargo.toml
       - run: cargo build --manifest-path t3n-contract/Cargo.toml --target wasm32-wasip2 --release
       - name: Report WASM size
         run: stat -c '%n %s bytes' t3n-contract/target/wasm32-wasip2/release/z_aml_compliance.wasm

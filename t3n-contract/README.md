@@ -24,6 +24,16 @@ node final-seed.mjs
 
 Run the commands from this directory. The scripts load `.env` from the repository root.
 
+## Tests
+
+Run the host-side unit tests:
+
+```bash
+cargo test
+```
+
+The tests cover case-insensitive OFAC matching, the direct sanctions score floor, and the APPROVE, REVIEW, and BLOCK boundaries. They run on the host with a loader stub. The KV path is exercised only inside the TEE.
+
 ## KV layout
 
 The v0.2.2 contract reads the sanctions JSON from:
