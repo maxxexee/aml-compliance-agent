@@ -13,6 +13,8 @@ import { fileURLToPath } from 'url';
 import { initT3N, runComplianceCheck, getStatus } from '../t3n-contracts/compliance.js';
 import { parseUserRequest, explainRiskResult, generateReport, chat, checkOllamaHealth } from './agent.js';
 import { checkSanctioned, getSanctionsSummary } from './sanctions-real.js';
+import { requireApiKey, createRateLimiter } from './security.js';
+
 
 // Wrapper for jurisdiction check
 function checkJurisdiction(jurisdiction) {
@@ -27,11 +29,26 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Render and most PaaS providers terminate TLS one hop in front of the app,
+// so the client address is the last forwarded address.
+app.set('trust proxy', 1);
+
 // Serve the web dashboard
 app.use(express.static(path.join(__dirname, '..', 'web', 'pages')));
 
 const PORT = process.env.PORT || 3001;
 const T3N_API_KEY = process.env.T3N_API_KEY;
+const API_KEY = process.env.API_KEY;
+const RATE_LIMIT_MAX = Number.parseInt(process.env.RATE_LIMIT_MAX ?? '60', 10);
+const RATE_LIMIT_WINDOW_MS = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10);
+
+// Rate limit every API route. Health checks stay open, so the Render probe
+// keeps working and the limiter never locks the service out.
+app.use('/api', createRateLimiter({ max: RATE_LIMIT_MAX, windowMs: RATE_LIMIT_WINDOW_MS }));
+
+// Key authentication for the routes that do real work. It is opt-in: without
+// API_KEY set, the local demo behaves exactly as before.
+const requireKey = requireApiKey(API_KEY);
 
 // ============================================
 // HEALTH CHECK
@@ -51,7 +68,7 @@ app.get('/api/health', (req, res) => {
 // WALLET COMPLIANCE CHECK
 // ============================================
 
-app.post('/api/check-wallet', async (req, res) => {
+app.post('/api/check-wallet', requireKey, async (req, res) => {
   try {
     const { wallet, check_type = 'aml', jurisdiction = 'GLOBAL' } = req.body;
     
@@ -123,7 +140,7 @@ app.post('/api/check-wallet', async (req, res) => {
 // BATCH CHECK
 // ============================================
 
-app.post('/api/check-batch', async (req, res) => {
+app.post('/api/check-batch', requireKey, async (req, res) => {
   try {
     const { wallets } = req.body;
     
@@ -178,7 +195,7 @@ app.post('/api/check-batch', async (req, res) => {
 // NATURAL LANGUAGE CHAT
 // ============================================
 
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', requireKey, async (req, res) => {
   try {
     const { message } = req.body;
     
@@ -387,6 +404,12 @@ async function start() {
   } else {
     console.warn('⚠️  No T3N_API_KEY set. Running in demo mode.');
   }
+
+  if (API_KEY) {
+    console.log('🔒 API key required on check-wallet, check-batch, and chat');
+  } else {
+    console.log('⚠️  No API_KEY set. The API is open. Set one before exposing it.');
+  }
   
   app.listen(PORT, () => {
     console.log(`
@@ -403,6 +426,7 @@ async function start() {
    curl http://localhost:${PORT}/api/health
    curl -X POST http://localhost:${PORT}/api/check-wallet \\
      -H "Content-Type: application/json" \\
+     ${API_KEY ? '-H "x-api-key: $API_KEY" \\' : ''}
      -d '{"wallet": "0x1234567890abcdef1234567890abcdef12345678"}'
 `);
   });

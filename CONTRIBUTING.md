@@ -20,6 +20,7 @@ cd aml-compliance-agent
 npm ci
 cp .env.example .env
 # Set T3N_API_KEY and OPENROUTER_API_KEY in .env
+# Optionally set API_KEY to require an x-api-key header on the check routes
 npm start
 ```
 
