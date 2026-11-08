@@ -123,6 +123,8 @@ const required = [
   'docs/assets/screen-chat.png',
   'scripts/check-repo.mjs',
   'test/sanctions.test.mjs',
+  'test/security.test.mjs',
+  'api/security.js',
   't3n-contract/README.md',
   'package.json',
   'package-lock.json',

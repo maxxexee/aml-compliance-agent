@@ -13,7 +13,7 @@
 
 R3nzo screens Ethereum wallets against 120 OFAC addresses and returns an explainable verdict. The sanctions list and risk model are designed to run inside a Terminal 3 Trusted Execution Environment, so the host only sees the result.
 
-> **Testnet prototype.** The T3N account has zero credits, so the running API uses the JavaScript fallback. The v0.2.2 contract is built and ready to register, but v0.1.0 is still the registered version. The API is unauthenticated and is not ready for production or customer data.
+> **Testnet prototype.** The T3N account has zero credits, so the running API uses the JavaScript fallback. The v0.2.2 contract is built and ready to register, but v0.1.0 is still the registered version. API key authentication is opt-in through `API_KEY`. The API is not ready for production or customer data.
 
 ## Contents
 
@@ -145,7 +145,7 @@ See [t3n-contract/README.md](t3n-contract/README.md) for the canonical scripts a
 | Check | Surface | Result |
 | --- | --- | --- |
 | Sanctions data | `wc -l data/ofac_eth.txt` | 120 addresses |
-| Unit tests | `npm test` | Sanctions loader and matching |
+| Unit tests | `npm test` | Sanctions loader, matching, API key auth, rate limiting |
 | Repository checks | `npm run check` | Required files, links, metadata, JS syntax |
 | Contract tests | `cargo test --manifest-path t3n-contract/Cargo.toml` | 9 unit tests for matching and thresholds |
 | Contract build | `cargo build --target wasm32-wasip2 --release` | 186252 bytes |
@@ -245,6 +245,9 @@ The server starts with the JavaScript fallback when T3N credits are unavailable.
 | --- | --- | --- |
 | `T3N_API_KEY` | For the TEE path | Terminal 3 API key used for the T3N handshake and contract calls |
 | `OPENROUTER_API_KEY` | For chat | OpenRouter key used by `/api/chat` |
+| `API_KEY` | No | Enables `x-api-key` authentication on `check-wallet`, `check-batch`, and `chat` |
+| `RATE_LIMIT_MAX` | No | Requests allowed per client per window, default `60` |
+| `RATE_LIMIT_WINDOW_MS` | No | Rate limit window in milliseconds, default `60000` |
 | `PORT` | No | API and dashboard port, default `3001` |
 
 ## Scripts
@@ -293,7 +296,18 @@ curl -s -X POST http://localhost:3001/api/check-batch \
   -d '{"wallets":["0x1111111111111111111111111111111111111111","0x0330070FD38Ec3bB94F58FA55D40368271E9e54A"]}'
 ```
 
-The API has no authentication or rate limiting. Treat it as a local demo.
+Each client gets `RATE_LIMIT_MAX` requests per `RATE_LIMIT_WINDOW_MS` across `/api`. The response carries `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset`, and an exhausted client gets a `429` with `Retry-After`.
+
+Set `API_KEY` to require an `x-api-key` header on `check-wallet`, `check-batch`, and `chat`. Health, sanctions, and audit stay open so the deployment probe keeps working. Without `API_KEY` the API stays open, which is the local demo mode.
+
+```bash
+curl -s -X POST http://localhost:3001/api/check-wallet \
+  -H 'Content-Type: application/json' \
+  -H "x-api-key: $API_KEY" \
+  -d '{"wallet":"0x0330070FD38Ec3bB94F58FA55D40368271E9e54A"}'
+```
+
+The dashboard asks for the key once and keeps it in session storage. The limiter is in memory and per process, so a multi instance deployment needs a shared store.
 
 ## MCP server
 
@@ -337,7 +351,7 @@ The MCP package has its own README at [mcp-server/README.md](mcp-server/README.m
 
 - The T3N account has zero credits. The API uses the JavaScript fallback for every check.
 - The registered contract is v0.1.0 and reads the old `sanctions` map. The v0.2.2 source is built but not registered.
-- The API has no authentication, rate limiting, or durable audit storage.
+- The API has opt-in key authentication and in-memory rate limiting. It has no durable audit storage.
 - The Render service is offline and needs to be recreated from `render.yaml`.
 - The dashboard chat depends on OpenRouter and fails without a key or available quota.
 - The JavaScript fallback is not a substitute for the TEE path. It exists so the product can be demonstrated and tested.
@@ -348,7 +362,7 @@ The MCP package has its own README at [mcp-server/README.md](mcp-server/README.m
 
 - Claim T3N test credits and register v0.2.2.
 - Seed `z:<tenant>:ofac` with `ofac_eth` and verify the TEE path end to end.
-- Add API authentication, rate limiting, and a persistent audit store.
+- Add a persistent audit store and a shared rate limit store.
 - Add contract tests for sanctions matching and each threshold boundary.
 - Recreate the Render service and publish a live demo.
 - Publish the MCP package and add more resources.
@@ -357,7 +371,7 @@ The MCP package has its own README at [mcp-server/README.md](mcp-server/README.m
 
 This is a testnet prototype. Do not submit real customer data, private keys, or production sanctions decisions.
 
-The API is unauthenticated. The audit log is in memory. The TEE path depends on Terminal 3 testnet availability and credits.
+The API ships with opt-in key authentication and per client rate limiting, both off by default. Set `API_KEY` before exposing the service. The audit log is in memory. The TEE path depends on Terminal 3 testnet availability and credits.
 
 Report vulnerabilities privately using the process in [SECURITY.md](SECURITY.md). Do not open a public issue for a security problem.
 

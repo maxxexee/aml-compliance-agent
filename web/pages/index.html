@@ -1121,6 +1121,37 @@
 
   // ---- API Integration ----
   const API_BASE = window.location.origin;
+  const API_KEY_STORAGE = 'r3nzo-api-key';
+
+  function getApiKey() {
+    try { return sessionStorage.getItem(API_KEY_STORAGE) || ''; } catch { return ''; }
+  }
+
+  function setApiKey(value) {
+    try {
+      if (value) sessionStorage.setItem(API_KEY_STORAGE, value);
+      else sessionStorage.removeItem(API_KEY_STORAGE);
+    } catch {}
+  }
+
+  // Sends the stored API key when one exists. If the server rejects it, ask
+  // once for a key and retry, so the public demo still works without one.
+  async function apiFetch(url, options) {
+    const request = { ...options, headers: { ...(options.headers || {}) } };
+    const key = getApiKey();
+    if (key) request.headers['x-api-key'] = key;
+
+    let response = await fetch(url, request);
+    if (response.status !== 401) return response;
+
+    const entered = window.prompt('This API requires a key. Paste it to continue.');
+    if (!entered || !entered.trim()) return response;
+
+    setApiKey(entered.trim());
+    request.headers['x-api-key'] = entered.trim();
+    response = await fetch(url, request);
+    return response;
+  }
 
   // Check wallet function
   async function checkWallet(walletAddress) {
@@ -1129,7 +1160,7 @@
     resultsDiv.style.display = 'block';
     
     try {
-      const response = await fetch(`${API_BASE}/api/check-wallet`, {
+      const response = await apiFetch(`${API_BASE}/api/check-wallet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wallet: walletAddress })
@@ -1219,7 +1250,7 @@
     addTyping();
 
     try {
-      const response = await fetch(`${API_BASE}/api/chat`, {
+      const response = await apiFetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msg })
