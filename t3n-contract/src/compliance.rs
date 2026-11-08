@@ -57,7 +57,7 @@ pub struct SanctionsMatch {
     pub category: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct CheckBatchInput {
     pub wallets: Vec<String>,
     #[serde(default = "default_jurisdiction")]
@@ -102,6 +102,16 @@ struct SanctionsEntry {
     name: String,
     source: String,
     category: String,
+}
+
+fn find_sanctions_match<'a>(
+    sanctions_data: &'a [SanctionsEntry],
+    wallet: &str,
+) -> Option<&'a SanctionsEntry> {
+    let wallet_lower = wallet.to_lowercase();
+    sanctions_data
+        .iter()
+        .find(|entry| entry.address.to_lowercase() == wallet_lower)
 }
 
 /// Get the tenant's KV map name for sanctions data
@@ -170,6 +180,11 @@ fn load_sanctions_from_kv() -> Result<Vec<SanctionsEntry>, String> {
     Err("sanctions data not found in TEE KV store".to_string())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+fn load_sanctions_from_kv() -> Result<Vec<SanctionsEntry>, String> {
+    Err("sanctions data is only available inside the TEE".to_string())
+}
+
 // ============================================
 // Core compliance functions
 // ============================================
@@ -184,13 +199,11 @@ pub fn check_wallet(input: &[u8]) -> Result<Vec<u8>, String> {
         return Err("Invalid Ethereum address format".to_string());
     }
 
-    let wallet_lower = req.wallet.to_lowercase();
-
     // Load sanctions data from TEE KV store
     let sanctions_data = load_sanctions_from_kv()?;
 
     // Check if wallet is sanctioned
-    let sanctions_match = sanctions_data.iter().find(|entry| entry.address.to_lowercase() == wallet_lower);
+    let sanctions_match = find_sanctions_match(&sanctions_data, &req.wallet);
 
     let mut flags = Vec::new();
     let mut breakdown = RiskBreakdown {
@@ -359,4 +372,145 @@ fn cluster_timestamp() -> String {
 #[cfg(not(target_arch = "wasm32"))]
 fn cluster_timestamp() -> String {
     "2026-01-01T00:00:00Z".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(address: &str, name: &str, category: &str) -> SanctionsEntry {
+        SanctionsEntry {
+            address: address.to_string(),
+            name: name.to_string(),
+            source: "OFAC".to_string(),
+            category: category.to_string(),
+        }
+    }
+
+    #[test]
+    fn matches_sanctioned_address_case_insensitively() {
+        let entries = vec![
+            entry(
+                "0x0330070FD38Ec3bB94F58FA55D40368271E9e54A",
+                "Sanctioned Entity",
+                "sanctioned",
+            ),
+            entry(
+                "0x1111111111111111111111111111111111111111",
+                "Clean",
+                "none",
+            ),
+        ];
+
+        let matched = find_sanctions_match(
+            &entries,
+            "0x0330070fd38ec3bb94f58fa55d40368271e9e54a",
+        )
+        .expect("sanctioned address should match");
+
+        assert_eq!(matched.name, "Sanctioned Entity");
+        assert_eq!(matched.category, "sanctioned");
+    }
+
+    #[test]
+    fn clean_address_has_no_sanctions_match() {
+        let entries = vec![entry(
+            "0x0330070FD38Ec3bB94F58FA55D40368271E9e54A",
+            "Sanctioned Entity",
+            "sanctioned",
+        )];
+
+        assert!(find_sanctions_match(
+            &entries,
+            "0x1111111111111111111111111111111111111111"
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn verdict_boundaries_are_exact() {
+        assert_eq!(determine_status(0), "APPROVE");
+        assert_eq!(determine_status(30), "APPROVE");
+        assert_eq!(determine_status(31), "REVIEW");
+        assert_eq!(determine_status(70), "REVIEW");
+        assert_eq!(determine_status(71), "BLOCK");
+        assert_eq!(determine_status(100), "BLOCK");
+    }
+
+    #[test]
+    fn clean_breakdown_scores_zero() {
+        let breakdown = RiskBreakdown {
+            sanctioned: 0,
+            mixer: 0,
+            jurisdiction: 0,
+            patterns: 0,
+        };
+
+        assert_eq!(calculate_risk_score(&breakdown, false), 0);
+    }
+
+    #[test]
+    fn direct_sanctions_match_scores_at_least_85() {
+        let breakdown = RiskBreakdown {
+            sanctioned: 100,
+            mixer: 0,
+            jurisdiction: 0,
+            patterns: 0,
+        };
+
+        assert_eq!(calculate_risk_score(&breakdown, true), 85);
+    }
+
+    #[test]
+    fn sanctioned_mixer_stays_at_the_sanctions_floor() {
+        let breakdown = RiskBreakdown {
+            sanctioned: 100,
+            mixer: 90,
+            jurisdiction: 0,
+            patterns: 0,
+        };
+
+        assert_eq!(calculate_risk_score(&breakdown, true), 85);
+    }
+
+    #[test]
+    fn rejects_invalid_addresses_before_loading_sanctions() {
+        let input = serde_json::to_vec(&CheckWalletInput {
+            wallet: "0x123".to_string(),
+            jurisdiction: "GLOBAL".to_string(),
+        })
+        .expect("serialize input");
+
+        assert_eq!(
+            check_wallet(&input).unwrap_err(),
+            "Invalid Ethereum address format"
+        );
+    }
+
+    #[test]
+    fn rejects_batches_over_50() {
+        let input = serde_json::to_vec(&CheckBatchInput {
+            wallets: vec!["0x1111111111111111111111111111111111111111".to_string(); 51],
+            jurisdiction: "GLOBAL".to_string(),
+        })
+        .expect("serialize input");
+
+        assert_eq!(
+            check_batch(&input).unwrap_err(),
+            "Maximum 50 wallets per batch"
+        );
+    }
+
+    #[test]
+    fn valid_address_without_tee_data_fails_closed() {
+        let input = serde_json::to_vec(&CheckWalletInput {
+            wallet: "0x1111111111111111111111111111111111111111".to_string(),
+            jurisdiction: "GLOBAL".to_string(),
+        })
+        .expect("serialize input");
+
+        assert!(check_wallet(&input)
+            .unwrap_err()
+            .contains("only available inside the TEE"));
+    }
 }

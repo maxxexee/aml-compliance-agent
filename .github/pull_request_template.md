@@ -10,6 +10,7 @@ Describe the problem and the change.
 
 - [ ] `npm test`
 - [ ] `npm run check`
+- [ ] `cargo test --manifest-path t3n-contract/Cargo.toml` for contract changes
 - [ ] `cargo build --manifest-path t3n-contract/Cargo.toml --target wasm32-wasip2 --release` for contract changes
 
 ## Checklist

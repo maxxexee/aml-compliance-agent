@@ -242,7 +242,7 @@ check('Render blueprint uses npm ci and a health check', () => {
 
 check('CI runs tests, checks, and the contract build', () => {
   const text = read('.github/workflows/check.yml');
-  for (const command of ['npm test', 'npm run check', 'cargo build']) {
+  for (const command of ['npm test', 'npm run check', 'cargo test', 'cargo build']) {
     if (!text.includes(command)) throw new Error(`workflow is missing ${command}`);
   }
 });

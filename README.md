@@ -108,7 +108,7 @@ The API is the only public surface. The TEE contract and the KV map are not expo
 | Source | `t3n-contract/src/lib.rs` and `t3n-contract/src/compliance.rs` |
 | Version | 0.2.2 |
 | Target | `wasm32-wasip2` |
-| Build size | 186306 bytes, about 182KB |
+| Build size | 186252 bytes, about 182KB |
 | Registered version | 0.1.0, contract ID 786 |
 | Sanctions map | `z:<tenant>:ofac`, key `ofac_eth` |
 | Current state | Built; registration blocked by zero T3N credits |
@@ -147,7 +147,8 @@ See [t3n-contract/README.md](t3n-contract/README.md) for the canonical scripts a
 | Sanctions data | `wc -l data/ofac_eth.txt` | 120 addresses |
 | Unit tests | `npm test` | Sanctions loader and matching |
 | Repository checks | `npm run check` | Required files, links, metadata, JS syntax |
-| Contract build | `cargo build --target wasm32-wasip2 --release` | 186306 bytes |
+| Contract tests | `cargo test --manifest-path t3n-contract/Cargo.toml` | 9 unit tests for matching and thresholds |
+| Contract build | `cargo build --target wasm32-wasip2 --release` | 186252 bytes |
 | Sanctioned wallet | `POST /api/check-wallet` | BLOCK, score 85, `directly_sanctioned` |
 | Clean wallet | `POST /api/check-wallet` | APPROVE, score 0 |
 | TEE registration | `node t3n-contract/register-v2.mjs` | Blocked, available credits 0 |
@@ -340,7 +341,7 @@ The MCP package has its own README at [mcp-server/README.md](mcp-server/README.m
 - The Render service is offline and needs to be recreated from `render.yaml`.
 - The dashboard chat depends on OpenRouter and fails without a key or available quota.
 - The JavaScript fallback is not a substitute for the TEE path. It exists so the product can be demonstrated and tested.
-- The TEE contract is built in CI but has no contract-level unit tests.
+- The TEE contract has host-side unit tests for matching and thresholds. It still has no end-to-end TEE test because the account has zero credits.
 - The risk score is an explainable heuristic, not a regulatory certification.
 
 ## Roadmap
@@ -370,9 +371,10 @@ npm test
 npm run check
 ```
 
-For contract changes, also build the WASM target:
+For contract changes, run the tests and build the WASM target:
 
 ```bash
+cargo test --manifest-path t3n-contract/Cargo.toml
 cargo build --manifest-path t3n-contract/Cargo.toml --target wasm32-wasip2 --release
 ```
 
