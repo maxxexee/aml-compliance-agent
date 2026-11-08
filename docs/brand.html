@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R3nzo brand assets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000000;
+    --panel:#0e0e11;
+    --panel-2:#141317;
+    --line:rgba(255,255,255,0.10);
+    --text:#f4f4f5;
+    --muted:#98989e;
+    --dim:#6c6c72;
+    --blue:#5cb2ee;
+    --blue-deep:#2f6f97;
+    --gold:#cdb26a;
+    --green:#4ADE80;
+    --red:#ef4444;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:#000;color:var(--text);font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;}
+  .artboard{position:relative;overflow:hidden;background:var(--bg);isolation:isolate;display:none;}
+  body[data-view="banner"] .banner{display:flex;}
+  body[data-view="social"] .social{display:flex;}
+  .grid{position:absolute;inset:0;z-index:-3;background-image:linear-gradient(rgba(255,255,255,0.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.035) 1px,transparent 1px);background-size:80px 80px;-webkit-mask-image:radial-gradient(ellipse at 62% 45%,#000 8%,transparent 74%);mask-image:radial-gradient(ellipse at 62% 45%,#000 8%,transparent 74%);}
+  .glow{position:absolute;border-radius:50%;filter:blur(90px);z-index:-2;opacity:.55;}
+  .glow-blue{width:900px;height:900px;right:-180px;top:-260px;background:radial-gradient(circle,rgba(92,178,238,0.30),transparent 66%);}
+  .glow-red{width:620px;height:620px;right:260px;bottom:-300px;background:radial-gradient(circle,rgba(239,68,68,0.18),transparent 68%);}
+  .glow-green{width:460px;height:460px;left:-180px;bottom:-240px;background:radial-gradient(circle,rgba(74,222,128,0.12),transparent 68%);}
+  .mono{font-family:'SFMono-Regular',Menlo,Consolas,monospace;}
+  .serif{font-family:'Instrument Serif',Georgia,serif;font-weight:400;}
+
+  /* ---------- 2560 x 800 banner ---------- */
+  .banner{width:2560px;height:800px;padding:86px 120px 82px;align-items:center;justify-content:space-between;gap:80px;}
+  .banner .copy{width:1430px;flex-shrink:0;}
+  .kicker{display:flex;align-items:center;gap:14px;font-size:17px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);}
+  .kicker::before{content:"";width:34px;height:1px;background:var(--blue);display:block;}
+  .banner .mark{font-size:228px;line-height:.82;letter-spacing:-8px;font-style:italic;margin-top:20px;color:#fff;}
+  .banner .mark span{color:var(--blue);}
+  .banner .tagline{margin-top:30px;font-size:54px;line-height:1.08;font-weight:400;letter-spacing:-1.5px;max-width:1320px;color:#f4f4f5;}
+  .banner .tagline em{font-family:'Instrument Serif',Georgia,serif;font-style:italic;color:var(--blue);font-weight:400;}
+  .banner .sub{margin-top:22px;font-size:24px;line-height:1.55;color:var(--muted);max-width:1120px;}
+  .banner .meta{display:flex;align-items:center;gap:14px;margin-top:32px;flex-wrap:wrap;}
+  .pill{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line);background:rgba(255,255,255,0.035);border-radius:999px;padding:11px 18px;font-size:15px;letter-spacing:.04em;color:#d8d8dc;}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px rgba(74,222,128,0.8);}
+  .pill .sep{color:#48484e;}
+  .banner .visual{flex:1;display:flex;align-items:center;justify-content:center;}
+  .verdict{width:700px;border:1px solid rgba(255,255,255,0.12);border-radius:26px;background:linear-gradient(160deg,rgba(20,19,23,0.96),rgba(10,10,12,0.98));box-shadow:0 40px 90px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.06);padding:34px 38px 30px;position:relative;overflow:hidden;}
+  .verdict::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--red),rgba(239,68,68,0.12));}
+  .v-head{display:flex;align-items:center;justify-content:space-between;}
+  .v-label{font-size:13px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;}
+  .attested{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.08em;color:var(--green);border:1px solid rgba(74,222,128,0.26);background:rgba(74,222,128,0.06);border-radius:999px;padding:7px 11px;}
+  .attested .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+  .v-addr{margin-top:28px;font-size:19px;letter-spacing:.02em;color:#c8c8ce;background:#08080a;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;}
+  .v-row{display:flex;align-items:flex-end;justify-content:space-between;margin-top:20px;}
+  .v-score{font-size:176px;line-height:.86;font-weight:300;letter-spacing:-10px;color:#fff;}
+  .v-score small{font-size:22px;letter-spacing:0;color:var(--dim);font-weight:400;margin-left:8px;}
+  .v-status{font-size:36px;font-weight:600;letter-spacing:.12em;color:var(--red);padding-bottom:20px;}
+  .v-flags{display:flex;gap:10px;margin-top:4px;}
+  .v-flags span{font-size:13px;letter-spacing:.04em;color:#e0a0a0;border:1px solid rgba(239,68,68,0.25);background:rgba(239,68,68,0.07);border-radius:7px;padding:7px 10px;}
+  .v-bars{display:flex;align-items:flex-end;gap:8px;height:74px;margin-top:26px;border-bottom:1px solid rgba(255,255,255,0.07);padding-bottom:12px;}
+  .v-bars span{flex:1;border-radius:3px 3px 0 0;background:linear-gradient(to top,rgba(92,178,238,0.15),rgba(92,178,238,0.75));}
+  .v-bars span:nth-child(4),.v-bars span:nth-child(5){background:linear-gradient(to top,rgba(239,68,68,0.18),rgba(239,68,68,0.75));}
+  .v-foot{display:flex;align-items:center;justify-content:space-between;margin-top:18px;font-size:12px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;}
+  .v-foot b{color:#a9a9b0;font-weight:500;}
+
+  /* ---------- 1280 x 640 social preview ---------- */
+  .social{width:1280px;height:640px;padding:72px 84px 66px;flex-direction:column;justify-content:space-between;}
+  .social .top{display:flex;align-items:flex-start;justify-content:space-between;gap:40px;}
+  .social .mark{font-size:154px;line-height:.8;letter-spacing:-5px;font-style:italic;color:#fff;}
+  .social .mark span{color:var(--blue);}
+  .social .stamp{display:flex;flex-direction:column;align-items:flex-end;gap:10px;text-align:right;}
+  .social .stamp .label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);}
+  .social .stamp .value{font-size:14px;letter-spacing:.04em;color:#d0d0d5;}
+  .social .middle{max-width:980px;}
+  .social .tagline{font-size:40px;line-height:1.12;letter-spacing:-.8px;font-weight:400;color:#f4f4f5;}
+  .social .tagline em{font-family:'Instrument Serif',Georgia,serif;font-style:italic;color:var(--blue);font-weight:400;}
+  .social .sub{margin-top:18px;font-size:19px;line-height:1.55;color:var(--muted);max-width:840px;}
+  .social .bottom{display:flex;align-items:center;justify-content:space-between;gap:30px;border-top:1px solid rgba(255,255,255,0.10);padding-top:22px;}
+  .social .bottom .left{display:flex;align-items:center;gap:12px;}
+  .social .bottom .right{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);}
+  .social .line{width:54px;height:1px;background:var(--blue);}
+</style>
+</head>
+<body data-view="banner">
+
+<div class="artboard banner" aria-label="R3nzo banner: privacy-first AML compliance inside a TEE">
+  <div class="grid"></div>
+  <div class="glow glow-blue"></div>
+  <div class="glow glow-red"></div>
+  <div class="glow glow-green"></div>
+
+  <div class="copy">
+    <div class="kicker">AML compliance agent</div>
+    <div class="mark serif">R<span>3</span>nzo</div>
+    <div class="tagline">Privacy-first AML compliance,<br><em>verified inside a TEE.</em></div>
+    <p class="sub">Screen wallets against 120 OFAC addresses. Return a verdict without exposing the wallet graph.</p>
+    <div class="meta">
+      <span class="pill"><span class="dot"></span>Terminal 3 TEE</span>
+      <span class="pill">Rust WASM <span class="sep">/</span> MCP</span>
+      <span class="pill">Apache-2.0</span>
+    </div>
+  </div>
+
+  <div class="visual">
+    <div class="verdict">
+      <div class="v-head">
+        <span class="v-label">Wallet screen</span>
+        <span class="attested"><span class="dot"></span>TEE attested</span>
+      </div>
+      <div class="v-addr mono">0x0330070FD38Ec3bB94F58FA55D40368271E9e54A</div>
+      <div class="v-row">
+        <div class="v-score">85<small>/100</small></div>
+        <div class="v-status">BLOCK</div>
+      </div>
+      <div class="v-flags"><span>OFAC SDN</span><span>direct match</span><span>risk 85</span></div>
+      <div class="v-bars">
+        <span style="height:28%"></span><span style="height:42%"></span><span style="height:36%"></span><span style="height:78%"></span><span style="height:92%"></span><span style="height:64%"></span><span style="height:48%"></span><span style="height:34%"></span><span style="height:22%"></span>
+      </div>
+      <div class="v-foot"><span><b>Terminal 3</b> enclave</span><span>contract v0.2.2</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="artboard social" aria-label="R3nzo social preview">
+  <div class="grid"></div>
+  <div class="glow glow-blue"></div>
+  <div class="glow glow-red"></div>
+  <div class="glow glow-green"></div>
+
+  <div class="top">
+    <div class="mark serif">R<span>3</span>nzo</div>
+    <div class="stamp">
+      <span class="label">Built on</span>
+      <span class="value">Terminal 3 TEE</span>
+    </div>
+  </div>
+
+  <div class="middle">
+    <div class="tagline">Privacy-first AML compliance,<br><em>verified inside a TEE.</em></div>
+    <p class="sub">Wallet screening, explainable risk scores, and audit-ready verdicts without exposing sensitive data.</p>
+  </div>
+
+  <div class="bottom">
+    <div class="left"><span class="line"></span><span class="pill"><span class="dot"></span>120 OFAC addresses</span></div>
+    <div class="right">Rust WASM / MCP / Apache-2.0</div>
+  </div>
+</div>
+
+<script>
+  const view = new URLSearchParams(location.search).get('view') || 'banner';
+  document.body.dataset.view = view;
+</script>
+</body>
+</html>

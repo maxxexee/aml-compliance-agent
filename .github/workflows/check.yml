@@ -1,0 +1,45 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: API checks and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run check
+      - name: Build MCP server
+        run: |
+          cd mcp-server
+          npm ci
+          npm run build
+
+  contract:
+    name: Build TEE contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
+      - run: cargo build --manifest-path t3n-contract/Cargo.toml --target wasm32-wasip2 --release
+      - name: Report WASM size
+        run: stat -c '%n %s bytes' t3n-contract/target/wasm32-wasip2/release/z_aml_compliance.wasm

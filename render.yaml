@@ -2,9 +2,12 @@ services:
   - type: web
     name: r3nzo-aml-agent
     runtime: node
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: node api/server.js
+    healthCheckPath: /api/health
     envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
       - key: T3N_API_KEY
         sync: false
       - key: OPENROUTER_API_KEY

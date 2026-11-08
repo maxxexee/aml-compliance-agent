@@ -7,8 +7,9 @@
   "scripts": {
     "start": "node api/server.js",
     "dev": "tsx watch api/server.js",
-    "test": "npx tsx test.js",
-    "web": "npx serve web/pages"
+    "test": "node --test test/*.test.mjs",
+    "test:integration": "node test.js",
+    "check": "node scripts/check-repo.mjs"
   },
   "keywords": [
     "aml",
@@ -19,7 +20,10 @@
     "kyc"
   ],
   "author": "",
-  "license": "MIT",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@terminal3/t3n-sdk": "^5.2.0",
     "cors": "^2.8.5",

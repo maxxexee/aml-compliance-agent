@@ -1,7 +1,7 @@
 {
   "name": "r3nzo-mcp-server",
   "version": "1.0.0",
-  "description": "MCP server for R3nzo AML Compliance Agent — privacy-preserving wallet checks via Terminal 3 TEE",
+  "description": "MCP server for R3nzo AML Compliance Agent: privacy-preserving wallet checks via Terminal 3 TEE",
   "type": "module",
   "main": "build/index.js",
   "bin": {
@@ -24,5 +24,8 @@
     "tsx": "^4.0.0"
   },
   "keywords": ["mcp", "aml", "compliance", "terminal3", "tee", "wallet-check"],
-  "license": "MIT"
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  }
 }

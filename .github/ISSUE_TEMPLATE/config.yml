@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/maxxexee/aml-compliance-agent/blob/main/SECURITY.md
+    about: Report a vulnerability privately. Do not open a public issue.
+  - name: Terminal 3 documentation
+    url: https://docs.terminal3.io
+    about: TEE and T3N SDK documentation.

@@ -1,6 +1,9 @@
 node_modules/
+mcp-server/build/
 .DS_Store
 .env
+.env.*
+!.env.example
 *.log
 /tmp/
 web/.DS_Store

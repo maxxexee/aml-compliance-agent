@@ -2,8 +2,8 @@
 name = "z-aml-compliance"
 version = "0.2.2"
 edition = "2021"
-description = "AML compliance checking TEE contract for Terminal 3 — sanctions matching + risk scoring inside the enclave"
-license = "MIT"
+description = "AML compliance checking TEE contract for Terminal 3: sanctions matching and risk scoring inside the enclave"
+license = "Apache-2.0"
 publish = false
 
 [lib]

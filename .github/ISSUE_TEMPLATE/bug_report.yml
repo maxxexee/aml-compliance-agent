@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a reproducible problem in R3nzo.
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include API keys, private keys, or customer data.
+        For security issues, use SECURITY.md instead of a public issue.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect?
+      placeholder: A clear and short description.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the request, route, or command.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - API
+        - Dashboard
+        - TEE contract
+        - MCP server
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      description: The commit SHA, branch, or release.
+      placeholder: main
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or output
+      description: Remove secrets before pasting.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I removed secrets and customer data from this report.
+          required: true
+        - label: I searched existing issues for the same problem.
+          required: true
